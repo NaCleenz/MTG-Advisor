@@ -1,4 +1,4 @@
-const API_BASE = "mtg-advisor.up.railway.app";
+const API_BASE = "https://mtg-advisor.up.railway.app";
 
 // ── State ────────────────────────────────────────────────────────────────
 let currentData = null;
