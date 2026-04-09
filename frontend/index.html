@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commander Advisor — MTG Deck Builder</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- ── Header ── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚔</span>
+        <div>
+          <h1>Commander Advisor</h1>
+          <p class="tagline">AI-powered EDH deck optimization</p>
+        </div>
+      </div>
+      <div id="ollama-badge" class="badge badge-loading">Checking AI...</div>
+    </div>
+  </header>
+
+  <!-- ── Main layout ── -->
+  <main class="main-layout">
+
+    <!-- ── Input Panel ── -->
+    <aside class="input-panel">
+      <section class="panel">
+        <h2 class="panel-title">Your Deck</h2>
+
+        <div class="field">
+          <label for="deck-list">Deck List</label>
+          <div class="field-hint">
+            Paste from Moxfield, Archidekt, or MTGO export.<br>
+            Mark your commander with <code>*CMDR*</code> or use a <code>Commander</code> section header.
+          </div>
+          <textarea
+            id="deck-list"
+            class="deck-textarea"
+            placeholder="Commander&#10;1 Atraxa, Praetors' Voice&#10;&#10;Deck&#10;1 Sol Ring&#10;1 Arcane Signet&#10;..."
+            rows="18"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="problem">Problem Statement <span class="optional">(optional)</span></label>
+          <div class="field-hint">
+            Describe what's going wrong — e.g. "My mana curve is too high and I run out of steam early" or "I can't handle board wipes."
+          </div>
+          <textarea
+            id="problem"
+            class="problem-textarea"
+            placeholder="What's your biggest weakness right now?"
+            rows="4"
+          ></textarea>
+        </div>
+
+        <button id="analyze-btn" class="btn-primary" onclick="analyzeDeck()">
+          <span class="btn-icon">✦</span>
+          Analyze Deck
+        </button>
+
+        <!-- Commander preview -->
+        <div id="commander-preview" class="commander-preview hidden">
+          <img id="commander-img" src="" alt="" />
+          <div class="commander-info">
+            <div id="commander-name" class="commander-name"></div>
+            <div id="commander-colors" class="color-pips"></div>
+            <a id="edhrec-link" href="#" target="_blank" class="edhrec-link">View on EDHRec ↗</a>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ── Results Panel ── -->
+    <section class="results-panel">
+
+      <!-- Initial state -->
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">🃏</div>
+        <h2>Paste your deck and analyze</h2>
+        <p>The advisor will find cards that strengthen your strategy, categorized by price range, plus hidden gems your opponents won't expect.</p>
+      </div>
+
+      <!-- Loading state -->
+      <div id="loading-state" class="loading-state hidden">
+        <div class="spinner-ring"></div>
+        <h2>Analyzing your deck...</h2>
+        <p id="loading-msg">Consulting the oracle...</p>
+      </div>
+
+      <!-- Error state -->
+      <div id="error-state" class="error-state hidden">
+        <div class="error-icon">⚠</div>
+        <h2 id="error-title">Something went wrong</h2>
+        <p id="error-msg"></p>
+      </div>
+
+      <!-- Results -->
+      <div id="results" class="hidden">
+
+        <!-- Problem analysis banner -->
+        <div id="analysis-banner" class="analysis-banner hidden">
+          <div class="analysis-header">
+            <span class="analysis-icon">🧠</span>
+            <strong>AI Analysis</strong>
+          </div>
+          <p id="analysis-text"></p>
+          <div id="keyword-chips" class="keyword-chips"></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="recommendations" onclick="switchTab('recommendations', this)">
+            Recommendations
+          </button>
+          <button class="tab-btn" data-tab="hidden-gems" onclick="switchTab('hidden-gems', this)">
+            ✨ Hidden Gems
+          </button>
+        </div>
+
+        <!-- Recommendations tab -->
+        <div id="tab-recommendations" class="tab-content active">
+          <!-- Price filter bar -->
+          <div class="price-filter-bar">
+            <span class="filter-label">Price range:</span>
+            <button class="filter-btn active" data-tier="all" onclick="filterPrice('all', this)">All</button>
+            <button class="filter-btn" data-tier="budget" onclick="filterPrice('budget', this)">
+              <span class="tier-dot budget"></span>Budget &lt;$1
+            </button>
+            <button class="filter-btn" data-tier="mid" onclick="filterPrice('mid', this)">
+              <span class="tier-dot mid"></span>Mid $1–$5
+            </button>
+            <button class="filter-btn" data-tier="premium" onclick="filterPrice('premium', this)">
+              <span class="tier-dot premium"></span>Premium $5–$20
+            </button>
+            <button class="filter-btn" data-tier="luxury" onclick="filterPrice('luxury', this)">
+              <span class="tier-dot luxury"></span>Luxury $20+
+            </button>
+          </div>
+
+          <!-- Recommendation sections by tier -->
+          <div id="recommendations-grid" class="cards-container">
+            <div id="tier-budget" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot budget"></span>Budget Picks <span class="tier-sub">under $1</span></h3>
+              <div class="card-grid" id="grid-budget"></div>
+            </div>
+            <div id="tier-mid" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot mid"></span>Mid-Range Picks <span class="tier-sub">$1 – $5</span></h3>
+              <div class="card-grid" id="grid-mid"></div>
+            </div>
+            <div id="tier-premium" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot premium"></span>Premium Picks <span class="tier-sub">$5 – $20</span></h3>
+              <div class="card-grid" id="grid-premium"></div>
+            </div>
+            <div id="tier-luxury" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot luxury"></span>Luxury Picks <span class="tier-sub">$20+</span></h3>
+              <div class="card-grid" id="grid-luxury"></div>
+            </div>
+            <div id="tier-unknown" class="price-tier-section">
+              <h3 class="tier-heading">Price Unknown</h3>
+              <div class="card-grid" id="grid-unknown"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden Gems tab -->
+        <div id="tab-hidden-gems" class="tab-content hidden">
+          <div class="gems-intro">
+            <span class="gem-icon">💎</span>
+            <div>
+              <strong>Hidden Gems</strong>
+              <p>These cards fit your commander's archetype but don't appear in typical EDHRec recommendations. Give your opponents something unexpected.</p>
+            </div>
+          </div>
+
+          <div class="price-filter-bar">
+            <span class="filter-label">Price range:</span>
+            <button class="filter-btn active" data-tier="all" onclick="filterGems('all', this)">All</button>
+            <button class="filter-btn" data-tier="budget" onclick="filterGems('budget', this)">
+              <span class="tier-dot budget"></span>Budget
+            </button>
+            <button class="filter-btn" data-tier="mid" onclick="filterGems('mid', this)">
+              <span class="tier-dot mid"></span>Mid
+            </button>
+            <button class="filter-btn" data-tier="premium" onclick="filterGems('premium', this)">
+              <span class="tier-dot premium"></span>Premium
+            </button>
+            <button class="filter-btn" data-tier="luxury" onclick="filterGems('luxury', this)">
+              <span class="tier-dot luxury"></span>Luxury
+            </button>
+          </div>
+
+          <div id="gems-grid" class="cards-container">
+            <div id="tier-gems-budget" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot budget"></span>Budget Gems <span class="tier-sub">under $1</span></h3>
+              <div class="card-grid" id="grid-gems-budget"></div>
+            </div>
+            <div id="tier-gems-mid" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot mid"></span>Mid-Range Gems <span class="tier-sub">$1 – $5</span></h3>
+              <div class="card-grid" id="grid-gems-mid"></div>
+            </div>
+            <div id="tier-gems-premium" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot premium"></span>Premium Gems <span class="tier-sub">$5 – $20</span></h3>
+              <div class="card-grid" id="grid-gems-premium"></div>
+            </div>
+            <div id="tier-gems-luxury" class="price-tier-section">
+              <h3 class="tier-heading"><span class="tier-dot luxury"></span>Luxury Gems <span class="tier-sub">$20+</span></h3>
+              <div class="card-grid" id="grid-gems-luxury"></div>
+            </div>
+            <div id="tier-gems-unknown" class="price-tier-section">
+              <h3 class="tier-heading">Price Unknown</h3>
+              <div class="card-grid" id="grid-gems-unknown"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /#results -->
+    </section>
+
+  </main>
+
+  <!-- ── Card Detail Modal ── -->
+  <div id="card-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-content">
+        <img id="modal-img" src="" alt="" class="modal-card-img" />
+        <div class="modal-info">
+          <h2 id="modal-name"></h2>
+          <div id="modal-type" class="modal-type"></div>
+          <div id="modal-price" class="modal-price"></div>
+          <div id="modal-oracle" class="modal-oracle"></div>
+          <div class="modal-actions">
+            <a id="modal-scryfall" href="#" target="_blank" class="btn-secondary">View on Scryfall ↗</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
