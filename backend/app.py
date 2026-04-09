@@ -47,9 +47,10 @@ async def health():
     return {"status": "ok", "ai": is_ai_available()}
 
 
-# Serve the frontend — must come AFTER all API routes so /api/* is matched first
+# Serve the frontend locally — skipped on Railway where frontend/ doesn't exist
 _frontend = os.path.join(os.path.dirname(__file__), "..", "frontend")
-app.mount("/", StaticFiles(directory=_frontend, html=True), name="frontend")
+if os.path.isdir(_frontend):
+    app.mount("/", StaticFiles(directory=_frontend, html=True), name="frontend")
 
 
 if __name__ == "__main__":

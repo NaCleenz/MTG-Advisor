@@ -13,7 +13,7 @@ let currentGemFilter = "all";
 async function checkOllamaStatus() {
   const badge = document.getElementById("ollama-badge");
   try {
-    const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${API_BASE}/api/health`, { signal: AbortSignal.timeout(10000) });
     const data = await res.json();
     if (data.ai) {
       badge.className = "badge badge-online";
