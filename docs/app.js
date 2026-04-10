@@ -8,7 +8,99 @@ let currentGemFilter = "all";
 // ── Init ─────────────────────────────────────────────────────────────────
 (async function init() {
   checkOllamaStatus();
+  setupCommanderAutocomplete();
 })();
+
+// ── Commander Autocomplete ────────────────────────────────────────────────
+let _acTimer   = null;
+let _acHighlight = -1;
+
+function setupCommanderAutocomplete() {
+  const input    = document.getElementById("commander-input");
+  const dropdown = document.getElementById("commander-suggestions");
+
+  input.addEventListener("input", () => {
+    clearTimeout(_acTimer);
+    const q = input.value.trim();
+    if (q.length < 2) { hideDropdown(); return; }
+    _acTimer = setTimeout(() => fetchSuggestions(q), 260);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    const items = dropdown.querySelectorAll(".autocomplete-item");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      _acHighlight = Math.min(_acHighlight + 1, items.length - 1);
+      updateAcHighlight(items);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      _acHighlight = Math.max(_acHighlight - 1, -1);
+      updateAcHighlight(items);
+    } else if (e.key === "Enter") {
+      if (_acHighlight >= 0 && items[_acHighlight]) {
+        e.preventDefault();
+        selectSuggestion(items[_acHighlight].dataset.name);
+      }
+    } else if (e.key === "Escape") {
+      hideDropdown();
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      hideDropdown();
+    }
+  });
+}
+
+async function fetchSuggestions(query) {
+  try {
+    const res  = await fetch(
+      `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(query)}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data = await res.json();
+    showDropdown(data.data || []);
+  } catch {
+    hideDropdown();
+  }
+}
+
+function showDropdown(names) {
+  const dropdown = document.getElementById("commander-suggestions");
+  dropdown.innerHTML = "";
+  _acHighlight = -1;
+  if (names.length === 0) { hideDropdown(); return; }
+  names.slice(0, 8).forEach(name => {
+    const li = document.createElement("li");
+    li.className    = "autocomplete-item";
+    li.textContent  = name;
+    li.dataset.name = name;
+    // mousedown fires before blur so the input doesn't lose focus first
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      selectSuggestion(name);
+    });
+    dropdown.appendChild(li);
+  });
+  dropdown.classList.remove("hidden");
+}
+
+function hideDropdown() {
+  document.getElementById("commander-suggestions").classList.add("hidden");
+  _acHighlight = -1;
+}
+
+function updateAcHighlight(items) {
+  items.forEach((item, i) => item.classList.toggle("active", i === _acHighlight));
+  if (_acHighlight >= 0) items[_acHighlight]?.scrollIntoView({ block: "nearest" });
+}
+
+function selectSuggestion(name) {
+  document.getElementById("commander-input").value = name;
+  hideDropdown();
+}
 
 async function checkOllamaStatus() {
   const badge = document.getElementById("ollama-badge");
@@ -30,8 +122,9 @@ async function checkOllamaStatus() {
 
 // ── Main Analyze ──────────────────────────────────────────────────────────
 async function analyzeDeck() {
-  const deckList = document.getElementById("deck-list").value.trim();
-  const problem  = document.getElementById("problem").value.trim();
+  const deckList  = document.getElementById("deck-list").value.trim();
+  const problem   = document.getElementById("problem").value.trim();
+  const commander = document.getElementById("commander-input").value.trim();
 
   if (!deckList) {
     flashError("Please paste your deck list first.");
@@ -60,7 +153,11 @@ async function analyzeDeck() {
     const res = await fetch(`${API_BASE}/api/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deck_list: deckList, problem_statement: problem || null }),
+      body: JSON.stringify({
+        deck_list: deckList,
+        problem_statement: problem || null,
+        commander_override: commander || null,
+      }),
       signal: AbortSignal.timeout(120_000),
     });
 

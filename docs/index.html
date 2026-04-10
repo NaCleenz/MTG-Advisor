@@ -32,16 +32,32 @@
         <h2 class="panel-title">Your Deck</h2>
 
         <div class="field">
+          <label for="commander-input">Commander</label>
+          <div class="field-hint">Start typing to search — selecting here overrides commander detection in the deck list.</div>
+          <div class="autocomplete-wrapper">
+            <input
+              type="text"
+              id="commander-input"
+              class="commander-input"
+              placeholder="e.g. Atraxa, Praetors' Voice"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <ul id="commander-suggestions" class="autocomplete-dropdown hidden"></ul>
+          </div>
+        </div>
+
+        <div class="field">
           <label for="deck-list">Deck List</label>
           <div class="field-hint">
             Paste from Moxfield, Archidekt, or MTGO export.<br>
-            Mark your commander with <code>*CMDR*</code> or use a <code>Commander</code> section header.
+            Commander is auto-detected from the list, or use the field above to set it directly.
           </div>
           <textarea
             id="deck-list"
             class="deck-textarea"
-            placeholder="Commander&#10;1 Atraxa, Praetors' Voice&#10;&#10;Deck&#10;1 Sol Ring&#10;1 Arcane Signet&#10;..."
-            rows="18"
+            placeholder="1 Sol Ring&#10;1 Arcane Signet&#10;1 Command Tower&#10;..."
+            rows="16"
           ></textarea>
         </div>
 

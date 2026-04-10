@@ -182,6 +182,64 @@ body {
 .deck-textarea::placeholder,
 .problem-textarea::placeholder { color: var(--text-hint); }
 
+/* ─── Commander Autocomplete ─────────────────────────────────────────────── */
+.autocomplete-wrapper {
+  position: relative;
+}
+
+.commander-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  padding: 10px 12px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.commander-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.12);
+}
+
+.commander-input::placeholder { color: var(--text-hint); }
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-panel2);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-sm);
+  list-style: none;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  padding: 9px 12px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid var(--border);
+}
+
+.autocomplete-item:last-child { border-bottom: none; }
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: rgba(201,168,76,0.15);
+  color: var(--gold-bright);
+}
+
 /* ─── Analyze Button ───────────────────────────────────────────────────── */
 .btn-primary {
   display: flex;

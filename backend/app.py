@@ -24,6 +24,7 @@ app.add_middleware(
 class RecommendRequest(BaseModel):
     deck_list: str
     problem_statement: Optional[str] = None
+    commander_override: Optional[str] = None
 
 
 @app.post("/api/recommend")
@@ -31,7 +32,11 @@ async def recommend(request: RecommendRequest):
     if not request.deck_list.strip():
         raise HTTPException(status_code=400, detail="Deck list cannot be empty.")
     try:
-        result = await get_recommendations(request.deck_list, request.problem_statement or None)
+        result = await get_recommendations(
+            request.deck_list,
+            request.problem_statement or None,
+            request.commander_override.strip() if request.commander_override else None,
+        )
         if "error" in result:
             raise HTTPException(status_code=422, detail=result["error"])
         return result

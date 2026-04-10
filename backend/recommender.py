@@ -43,11 +43,21 @@ def _categorize_by_price(cards: list[dict]) -> dict:
     return buckets
 
 
-async def get_recommendations(deck_list: str, problem_statement: Optional[str]) -> dict:
+async def get_recommendations(
+    deck_list: str,
+    problem_statement: Optional[str],
+    commander_override: Optional[str] = None,
+) -> dict:
     # ── 1. Parse deck ────────────────────────────────────────────────────
     commander_name, deck_cards = parse_deck_list(deck_list)
+
+    if commander_override:
+        commander_name = commander_override
+        # Remove the commander from the card list if the user accidentally included it
+        deck_cards = [c for c in deck_cards if c.lower() != commander_name.lower()]
+
     if not commander_name:
-        return {"error": "Could not identify a commander in the deck list. Make sure your commander is marked (e.g. with *CMDR*) or listed under a 'Commander' section."}
+        return {"error": "Could not identify a commander. Enter your commander in the Commander field above, or mark it in the deck list with *CMDR* or a 'Commander' section header."}
 
     deck_set = {c.lower() for c in deck_cards}
     deck_set.add(commander_name.lower())
