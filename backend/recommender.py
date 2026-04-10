@@ -75,6 +75,15 @@ async def get_recommendations(
         edhrec_data = await get_edhrec_recommendations(commander_name)
         edhrec_names: set[str] = edhrec_data["all_names"]
 
+        # Prominent = only top cards + high synergy. Used as the hidden-gem
+        # exclusion filter so secondary-section cards (ramp, removal, etc.)
+        # can still surface as gems. edhrec_names contains every section
+        # (400-600+ cards), which filtered out nearly everything.
+        prominent_edhrec: set[str] = (
+            {c["name"].lower() for c in edhrec_data["top_cards"]}
+            | {c["name"].lower() for c in edhrec_data["high_synergy"]}
+        )
+
         # ── 4. Ollama problem analysis (if provided) ──────────────────────
         ollama_ok = await is_ollama_available()
         analysis_text = ""
@@ -153,8 +162,8 @@ async def get_recommendations(
                 name_lower = card["name"].lower()
                 if name_lower in deck_set:
                     continue
-                if name_lower in edhrec_names:
-                    continue  # Must NOT be on EDHRec
+                if name_lower in prominent_edhrec:
+                    continue  # Skip cards already prominently recommended
                 hidden_gems.append(card)
                 if len(hidden_gems) >= 30:
                     break
