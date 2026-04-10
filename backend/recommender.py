@@ -16,6 +16,7 @@ from ollama_client import (
     is_ollama_available,
     analyze_problem,
     analyze_archetype,
+    _theme_to_oracle_queries,
 )
 
 
@@ -112,14 +113,19 @@ async def get_recommendations(deck_list: str, problem_statement: Optional[str]) 
 
         # ── 6. Hidden Gems ────────────────────────────────────────────────
         hidden_gems: list[dict] = []
+        edhrec_themes = edhrec_data.get("themes", [])
 
         if ollama_ok:
             top_names = [c["name"] for c in edhrec_data["top_cards"][:20]]
-            archetype = await analyze_archetype(commander_name, color_str, top_names)
+            archetype = await analyze_archetype(
+                commander_name, color_str, top_names, edhrec_themes
+            )
             gem_queries = archetype.get("queries", [])
         else:
-            # Fallback: use EDHRec themes or color-based defaults
-            gem_queries = _default_gem_queries(color_identity, edhrec_data.get("themes", []))
+            # Fallback: map EDHRec archetype themes to oracle text phrases
+            gem_queries = _theme_to_oracle_queries(edhrec_themes)
+            if not gem_queries:
+                gem_queries = _default_gem_queries(color_identity, edhrec_themes)
 
         if gem_queries:
             color_q = build_color_query(color_identity)
