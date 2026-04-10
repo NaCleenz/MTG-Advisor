@@ -132,16 +132,22 @@ async def get_recommendations(
             )
             gem_queries = archetype.get("queries", [])
         else:
-            # Fallback: map EDHRec archetype themes to oracle text phrases
+            gem_queries = []
+
+        # Always fall through to theme/color defaults if AI returned nothing
+        if not gem_queries:
             gem_queries = _theme_to_oracle_queries(edhrec_themes)
-            if not gem_queries:
-                gem_queries = _default_gem_queries(color_identity, edhrec_themes)
+        if not gem_queries:
+            gem_queries = _default_gem_queries(color_identity, edhrec_themes)
 
         if gem_queries:
             color_q = build_color_query(color_identity)
             oracle_q = build_oracle_query(gem_queries[:5])
             gem_query = f"{color_q} {oracle_q} format:commander -is:land"
-            gem_results = await search_cards(gem_query, client, max_cards=80)
+            # Use alphabetical order — EDHRec-popularity order returns the most
+            # commonly recommended cards first, which edhrec_names then filters out,
+            # leaving nothing. Name order gives an unbiased cross-section.
+            gem_results = await search_cards(gem_query, client, max_cards=200, order="name")
 
             for card in gem_results:
                 name_lower = card["name"].lower()

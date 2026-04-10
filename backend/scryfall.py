@@ -87,6 +87,7 @@ async def search_cards(
     query: str,
     client: httpx.AsyncClient,
     max_cards: int = 30,
+    order: str = "edhrec",
 ) -> list[dict]:
     """Search Scryfall and return up to max_cards card summaries."""
     results = []
@@ -97,7 +98,7 @@ async def search_cards(
         try:
             resp = await client.get(
                 f"{SCRYFALL_BASE}/cards/search",
-                params={"q": query, "order": "edhrec", "page": page},
+                params={"q": query, "order": order, "page": page},
                 timeout=15,
             )
             if resp.status_code == 404:
