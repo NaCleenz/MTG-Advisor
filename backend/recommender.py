@@ -134,41 +134,61 @@ async def get_recommendations(
         hidden_gems: list[dict] = []
         edhrec_themes = edhrec_data.get("themes", [])
 
+        print(f"[GEMS] Commander: {commander_name!r} | Colors: {color_str!r}")
+        print(f"[GEMS] EDHRec themes: {edhrec_themes}")
+        print(f"[GEMS] EDHRec top_cards count: {len(edhrec_data['top_cards'])} | high_synergy count: {len(edhrec_data['high_synergy'])}")
+        print(f"[GEMS] prominent_edhrec size: {len(prominent_edhrec)}")
+        print(f"[GEMS] AI available: {ollama_ok}")
+
         if ollama_ok:
             top_names = [c["name"] for c in edhrec_data["top_cards"][:20]]
             archetype = await analyze_archetype(
                 commander_name, color_str, top_names, edhrec_themes
             )
             gem_queries = archetype.get("queries", [])
+            print(f"[GEMS] AI archetype queries: {gem_queries}")
         else:
             gem_queries = []
 
         # Always fall through to theme/color defaults if AI returned nothing
         if not gem_queries:
             gem_queries = _theme_to_oracle_queries(edhrec_themes)
+            print(f"[GEMS] Theme-mapped queries: {gem_queries}")
         if not gem_queries:
             gem_queries = _default_gem_queries(color_identity, edhrec_themes)
+            print(f"[GEMS] Color-default queries: {gem_queries}")
+
+        print(f"[GEMS] Final gem_queries (pre-slice): {gem_queries}")
 
         if gem_queries:
             color_q = build_color_query(color_identity)
             oracle_q = build_oracle_query(gem_queries[:5])
             gem_query = f"{color_q} {oracle_q} format:commander -is:land"
-            # Use alphabetical order — EDHRec-popularity order returns the most
-            # commonly recommended cards first, which edhrec_names then filters out,
-            # leaving nothing. Name order gives an unbiased cross-section.
-            gem_results = await search_cards(gem_query, client, max_cards=200, order="name")
+            print(f"[GEMS] Scryfall query: {gem_query!r}")
 
+            gem_results = await search_cards(gem_query, client, max_cards=200, order="name")
+            print(f"[GEMS] Scryfall returned {len(gem_results)} cards")
+
+            filtered_deck = 0
+            filtered_edhrec = 0
             for card in gem_results:
                 name_lower = card["name"].lower()
                 if name_lower in deck_set:
+                    filtered_deck += 1
                     continue
                 if name_lower in prominent_edhrec:
-                    continue  # Skip cards already prominently recommended
+                    filtered_edhrec += 1
+                    continue
                 hidden_gems.append(card)
                 if len(hidden_gems) >= 30:
                     break
 
+            print(f"[GEMS] Filtered out — in deck: {filtered_deck} | in prominent_edhrec: {filtered_edhrec}")
+            print(f"[GEMS] Hidden gems before dedupe: {len(hidden_gems)}")
             hidden_gems = _dedupe(hidden_gems)
+            print(f"[GEMS] Hidden gems after dedupe: {len(hidden_gems)}")
+        else:
+            print("[GEMS] No gem_queries generated — skipping Scryfall search")
 
         # ── 7. Assemble response ──────────────────────────────────────────
         categorized = _categorize_by_price(recommendations)

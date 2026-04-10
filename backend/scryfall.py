@@ -102,10 +102,15 @@ async def search_cards(
                 timeout=15,
             )
             if resp.status_code == 404:
+                print(f"[SCRYFALL] 404 no results — query: {query!r}")
+                break
+            if resp.status_code == 429:
+                print(f"[SCRYFALL] 429 rate limited — query: {query!r}")
                 break
             resp.raise_for_status()
             data = resp.json()
-        except Exception:
+        except Exception as exc:
+            print(f"[SCRYFALL] Exception on page {page} — {type(exc).__name__}: {exc} — query: {query!r}")
             break
 
         for card in data.get("data", []):
