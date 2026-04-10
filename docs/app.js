@@ -308,7 +308,10 @@ document.addEventListener("keydown", e => {
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function switchTab(tabName, btnEl) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => {
+    c.classList.remove("active");
+    c.classList.remove("hidden");
+  });
   document.getElementById(`tab-${tabName}`).classList.add("active");
   if (btnEl) btnEl.classList.add("active");
 }
